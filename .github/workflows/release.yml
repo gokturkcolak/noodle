@@ -135,3 +135,41 @@ jobs:
       - name: Remove the signing keychain
         if: always() && env.HAS_SIGNING == 'true'
         run: security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true
+
+  # Adds Noodle-Windows.zip and NoodleSetup.exe to the release the macOS job just created. Unsigned for now,
+  # so Windows SmartScreen asks once ("More info" > "Run anyway").
+  windows:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $version = "$env:GITHUB_REF_NAME".TrimStart('v')
+          "VERSION=$version" >> $env:GITHUB_ENV
+          dotnet publish windows/Noodle -c Release -p:Version=$version -o "$env:RUNNER_TEMP/publish" -nologo
+          windows/test/hooks-test.ps1 -Exe "$env:RUNNER_TEMP/publish/Noodle.exe"
+
+      - name: Zip and installer
+        shell: pwsh
+        run: |
+          $out = "$env:RUNNER_TEMP/out"; New-Item -ItemType Directory $out | Out-Null
+          Compress-Archive "$env:RUNNER_TEMP/publish/*" "$out/Noodle-Windows.zip"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress | Out-Null }
+          & $iscc /Q "/DVersion=$env:VERSION" "/DSource=$env:RUNNER_TEMP\publish" "/O$out" windows/installer/noodle.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          Get-ChildItem $out | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName).Hash.ToLower(), $_.Name } |
+            Out-File -Encoding ascii "$out/Noodle-Windows.sha256"
+
+      - name: Upload to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $out = "$env:RUNNER_TEMP/out"
+          gh release upload "$env:GITHUB_REF_NAME" "$out/Noodle-Windows.zip" "$out/NoodleSetup.exe" "$out/Noodle-Windows.sha256" --repo "$env:GITHUB_REPOSITORY" --clobber

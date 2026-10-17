@@ -1,0 +1,38 @@
+# Builds the Windows app and runs its settings.json hook tests on every push or PR that touches it.
+name: Windows
+
+on:
+  push:
+    paths: ['windows/**', 'app/Resources/**', '.github/workflows/windows.yml']
+  pull_request:
+    paths: ['windows/**', 'app/Resources/**', '.github/workflows/windows.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262   # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Build
+        run: dotnet build windows/Noodle -c Debug -nologo
+
+      - name: Hook tests
+        shell: pwsh
+        run: windows/test/hooks-test.ps1
+
+      - name: Publish
+        run: dotnet publish windows/Noodle -c Release -o "${{ runner.temp }}/publish" -nologo
+
+      - name: Smoke test the published exe
+        shell: pwsh
+        run: |
+          $exe = "${{ runner.temp }}/publish/Noodle.exe"
+          $v = & $exe version | Out-String
+          if (-not $v.Trim()) { throw "Noodle.exe version printed nothing" }
+          "Noodle $v"

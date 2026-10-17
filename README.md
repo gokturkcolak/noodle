@@ -7,7 +7,7 @@ Stretching while Claude is noodling. **[tonitherigatoni.com](https://tonitheriga
 
 While Claude Code is busy on a long prompt, a card slides in from the edge of your screen with a quick desk stretch and a little noodle sticker to show you how. Hit Start and your noodle times the set. Pick your pasta: Toni the Rigatoni, Sammy the Spaghetti, Patty the Penne, or Lenny the Lasagna. Quick prompts never trigger a card, and it never steals focus from your terminal or editor.
 
-Works everywhere Claude Code runs hooks: the CLI, the VS Code and Cursor extensions, and the Code tab in Claude Desktop. macOS only.
+Works everywhere Claude Code runs hooks: the CLI, the VS Code and Cursor extensions, and the Code tab in Claude Desktop. macOS, plus [Windows](#windows-beta) in beta.
 
 ## Install
 
@@ -41,6 +41,16 @@ scripts/install.sh
 ```
 
 Builds `Noodle.app` and does the same setup. Needs Xcode command line tools (`swift`) and `jq`.
+
+### Windows (beta)
+
+Download **NoodleSetup.exe** from the [latest release](https://github.com/pcybriwsky/noodle/releases/latest) and run it. It installs just for you (no admin prompt) into `%LOCALAPPDATA%\Programs\Noodle`. The build isn't code-signed yet, so SmartScreen asks once: **More info › Run anyway**. Needs Windows 10 1809 or later with the Edge WebView2 Runtime (built into Windows 11). Prefer no installer? `Noodle-Windows.zip` runs from any folder you keep it in.
+
+Noodle opens on the same **Connect to Claude Code** step, with the same diff, backup, and confirm before anything is written to `%USERPROFILE%\.claude\settings.json`. The hooks run `"…/Noodle.exe" --event prompt` and `--event stop`, which hand off to the running copy and exit right away. From a terminal, `noodle setup` and `noodle remove` work like on the Mac (tick "Add the noodle command to PATH" in the installer).
+
+It's the same cards, cast, and settings, from the tray icon instead of the menu bar (left-click opens Noodle, right-click for the menu). "Hold during calls" reads which apps are using your mic or camera, the same record behind Windows' privacy icons. Holding for calendar events is Mac-only for now. Uninstalling from Settings › Apps takes the hooks back out.
+
+From source: `dotnet build windows/Noodle` (needs the .NET 8 SDK), then run `windows/Noodle/bin/Debug/net8.0-windows/Noodle.exe`. `windows/test/hooks-test.ps1` tests the settings.json changes against temp files. Set `CLAUDE_SETTINGS` and `CLAUDE_POSTURE_HOME` to try it on copies, and `NOODLE_DEBUG=1` to log to `%LOCALAPPDATA%\Noodle\debug.log`.
 
 ## How it works
 

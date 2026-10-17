@@ -5,3 +5,5 @@ app/.swiftpm/
 *.xcodeproj/xcuserdata/
 .claude/
 build/
+windows/**/bin/
+windows/**/obj/
